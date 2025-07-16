@@ -3,89 +3,98 @@
 📌 PySpark Pattern Detection Pipeline – Offline Assignment
 This project is a simplified version of a real-time transaction pattern detection system, implemented using Apache Spark (PySpark) on Databricks, with AWS S3 as the streaming source and PostgreSQL for intermediate state management.
 
-The pipeline is designed to simulate a streaming ingestion system that continuously detects specific patterns from incoming transaction data, updates stats, and outputs detection results in batch files to S3.
+The pipeline simulates streaming ingestion that continuously:
+
+Detects specific patterns from transaction data,
+
+Updates stats in PostgreSQL,
+
+Outputs detection results in batch files to S3.
 
 🎯 Objective
-The main objective is to:
+The main goals of the project are to:
 
-Simulate streaming data processing using batch chunk ingestion from S3.
+Simulate streaming data processing using chunk-based ingestion from S3.
 
-Detect three specific behavioral or demographic patterns from the transaction stream.
+Detect three behavioral or demographic patterns in near real-time.
 
-Store intermediate statistics in PostgreSQL to maintain state across chunks.
+Store intermediate statistics in PostgreSQL to maintain state across batches.
 
-Save detection results in batch-wise CSV files to a specified S3 output folder.
+Save detection results in batch-wise CSVs to an S3 output folder.
 
 📂 Dataset
-The transaction data is provided in chunks (CSV format), each simulating a mini-stream. Due to the limited row count (1000 rows), all pattern thresholds were downscaled to match the data size, while preserving the original logic structure.
+The transaction data is ingested from S3 in chunks (CSV format).
+
+Each chunk simulates a mini data stream.
+
+Because the dataset contains only 1000 rows, all threshold values for pattern detection were scaled down (while preserving the core logic).
 
 ✅ Patterns Detected
 PatId1 – UPGRADE
-Goal: Detect high-frequency but low-weight customers for a merchant.
+Detect top customers with low weight per merchant:
 
-Customers in the top 10% of transaction count with a merchant.
+Customers in the top 10% by transaction count.
 
-Whose average weight is in the bottom 10%.
+With average weight in bottom 10%.
 
-Only considered if the merchant has more than 500 total transactions (scaled from original 50K).
+Considered only if merchant has > 500 transactions.
 
 ActionType: UPGRADE
 
 PatId2 – CHILD
-Goal: Detect low-value, high-volume customers.
+Detect low-value, high-frequency customers:
 
-Customers with more than 2 transactions with a merchant (scaled from 80).
+Customers with > 2 transactions with a merchant.
 
-And average transaction amount less than ₹800 (scaled from ₹23).
+Average transaction value < ₹800.
 
 ActionType: CHILD
 
 PatId3 – DEI-NEEDED
-Goal: Detect merchants with potential gender imbalance.
+Detect merchants with gender imbalance:
 
-More than 10 female customers (scaled from 100).
+More than 10 female customers overall.
 
-Where female customer count is less than male.
+But female count < male count.
 
 ActionType: DEI-NEEDED
 
 ⚙️ Technologies Used
-PySpark for distributed processing
+PySpark for distributed data processing
 
-PostgreSQL for maintaining stats across chunks
+PostgreSQL for maintaining intermediate statistics
 
 Databricks for orchestrating the pipeline
 
-AWS S3 as both the source and target for streaming data
+AWS S3 as source and sink for streaming data
 
-Python libraries: boto3, pandas, s3fs (for validation and export)
+Python Libraries: boto3, pandas, s3fs (for file validation & export)
 
-Components
-Mechanism X
+🧩 Components
+🔸 Mechanism X – Chunk Uploader
+Uploads transaction chunks from Google Drive to S3.
 
-Uploads transaction chunks from Google Drive to S3 under a structured prefix (e.g. streaming/input/chunk_0.csv/)
+Stores them under a structured path like:
+s3://pattern-detection-pyspark/streaming/input/chunk_0.csv/
 
-Simulates chunk-based streaming.
+Simulates data stream behavior for offline setup.
 
-Mechanism Y
+🔸 Mechanism Y – Pattern Detection Pipeline
+A PySpark notebook/script that is run periodically.
 
-A PySpark script (run periodically) that:
+Detects new incoming chunks in S3.
 
-Detects newly arrived chunks in S3.
+Reads data and updates stats in PostgreSQL.
 
-Reads and processes each chunk.
+Applies all three pattern detection rules.
 
-Updates stats for each pattern in PostgreSQL.
+Writes detection results as CSV files to S3, in batch format.
 
-Applies pattern detection logic.
-
-Writes detections to S3 as CSV.
-
-Output
-Output CSVs are written to:
+📤 Output
+CSV output files are saved under:
 s3://pattern-detection-pyspark/streaming/output/
 
-Each detection batch is saved with a timestamp-based folder structure for traceability.
+Each batch is stored in a timestamped folder.
 
-Final output can be downloaded and reviewed locally or in Excel.
+The output can be downloaded and viewed locally (e.g. in Excel).
 
