@@ -1,100 +1,114 @@
-# pattern-detection-pyspark-s3
+# PySpark Pattern Detection Pipeline – Offline Assignment
 
-📌 PySpark Pattern Detection Pipeline – Offline Assignment
-This project is a simplified version of a real-time transaction pattern detection system, implemented using Apache Spark (PySpark) on Databricks, with AWS S3 as the streaming source and PostgreSQL for intermediate state management.
+This project simulates a simplified real-time transaction pattern detection system using **Apache Spark (PySpark)** on **Databricks**, with **AWS S3** as the streaming source and **PostgreSQL** for stateful tracking.
 
-The pipeline simulates streaming ingestion that continuously:
+The pipeline simulates streaming ingestion that:
 
-Detects specific patterns from transaction data,
+- Detects specific patterns from transaction data
+- Updates stats in PostgreSQL
+- Outputs detection results to AWS S3 as batch CSV files
 
-Updates stats in PostgreSQL,
+---
 
-Outputs detection results in batch files to S3.
+## 🎯 Objective
 
-🎯 Objective
-The main goals of the project are to:
+The primary objectives of the project:
 
-Simulate streaming data processing using chunk-based ingestion from S3.
+- Simulate streaming data processing using chunk-based ingestion from S3  
+- Detect three behavioral/demographic patterns in near real-time  
+- Store intermediate statistics in PostgreSQL for state management  
+- Output pattern detections as CSV files to an S3 output directory  
 
-Detect three behavioral or demographic patterns in near real-time.
+---
 
-Store intermediate statistics in PostgreSQL to maintain state across batches.
+## 📂 Dataset
 
-Save detection results in batch-wise CSVs to an S3 output folder.
+- Input data is split into **CSV chunks**, simulating streaming events  
+- Each chunk is uploaded to S3 under a path like:  
+  `s3://pattern-detection-pyspark/streaming/input/chunk_0.csv/`
+- Since the dataset is limited to ~1000 rows, thresholds for patterns have been **scaled down** for meaningful detection, while keeping logic intact  
 
-📂 Dataset
-The transaction data is ingested from S3 in chunks (CSV format).
+---
 
-Each chunk simulates a mini data stream.
+## ✅ Patterns Detected
 
-Because the dataset contains only 1000 rows, all threshold values for pattern detection were scaled down (while preserving the core logic).
+### `PatId1 – UPGRADE`
+**Goal**: Detect top customers with low transaction weight for a merchant
 
-✅ Patterns Detected
-PatId1 – UPGRADE
-Detect top customers with low weight per merchant:
+- Customers in **top 10%** by transaction count  
+- With **average weight in bottom 10%**  
+- Merchant must have **> 500 transactions** (scaled from 50K)  
+- **ActionType**: `UPGRADE`  
 
-Customers in the top 10% by transaction count.
+---
 
-With average weight in bottom 10%.
+### `PatId2 – CHILD`
+**Goal**: Detect low-value, high-frequency customers
 
-Considered only if merchant has > 500 transactions.
+- Customers with **> 2 transactions** with a merchant (scaled from 80)  
+- **Average transaction value < ₹800** (scaled from ₹23)  
+- **ActionType**: `CHILD`  
 
-ActionType: UPGRADE
+---
 
-PatId2 – CHILD
-Detect low-value, high-frequency customers:
+### `PatId3 – DEI-NEEDED`
+**Goal**: Detect merchants with gender imbalance
 
-Customers with > 2 transactions with a merchant.
+- **> 10 female customers** overall (scaled from 100)  
+- **Female count < Male count**  
+- **ActionType**: `DEI-NEEDED`  
 
-Average transaction value < ₹800.
+---
 
-ActionType: CHILD
+## ⚙️ Technologies Used
 
-PatId3 – DEI-NEEDED
-Detect merchants with gender imbalance:
+- **PySpark** – Distributed data processing  
+- **PostgreSQL** – To track stats across chunks (stateful processing)  
+- **Databricks** – To run and orchestrate the pipeline  
+- **AWS S3** – Source and target for streaming chunks and detections  
+- **Python libraries** – `boto3`, `pandas`, `s3fs` (used for exporting and testing)
 
-More than 10 female customers overall.
+---
 
-But female count < male count.
+## 🧩 Components
 
-ActionType: DEI-NEEDED
+### 🔹 Mechanism X – Chunk Uploader
+- Uploads CSV chunks from Google Drive to S3  
+- Stores each chunk in a unique subfolder like:  
+  `s3://pattern-detection-pyspark/streaming/input/chunk_0.csv/`  
+- Simulates a streaming source for offline analysis  
 
-⚙️ Technologies Used
-PySpark for distributed data processing
+### 🔹 Mechanism Y – Pattern Detection Pipeline
+- PySpark script/notebook triggered periodically  
+- Detects new folders in the input prefix on S3  
+- Reads new chunk data into Spark  
+- Updates running stats in PostgreSQL  
+- Applies pattern detection logic  
+- Writes batch-wise detections to S3:  
+  `s3://pattern-detection-pyspark/streaming/output/pattern_detected_<timestamp>.csv/`  
 
-PostgreSQL for maintaining intermediate statistics
+---
 
-Databricks for orchestrating the pipeline
+## 📤 Output
 
-AWS S3 as source and sink for streaming data
+- Output is saved in timestamped CSV folders in:  
+  `s3://pattern-detection-pyspark/streaming/output/`  
+- Each folder contains batch-wise results for pattern detections  
+- Final output can be downloaded from S3 and viewed in Excel or other tools  
 
-Python Libraries: boto3, pandas, s3fs (for file validation & export)
+---
 
-🧩 Components
-🔸 Mechanism X – Chunk Uploader
-Uploads transaction chunks from Google Drive to S3.
+## 📁 Folder Structure (S3)
 
-Stores them under a structured path like:
-s3://pattern-detection-pyspark/streaming/input/chunk_0.csv/
-
-Simulates data stream behavior for offline setup.
-
-🔸 Mechanism Y – Pattern Detection Pipeline
-A PySpark notebook/script that is run periodically.
-
-Detects new incoming chunks in S3.
-
-Reads data and updates stats in PostgreSQL.
-
-Applies all three pattern detection rules.
-
-Writes detection results as CSV files to S3, in batch format.
-
-📤 Output
-CSV output files are saved under:
-s3://pattern-detection-pyspark/streaming/output/
-
-Each batch is stored in a timestamped folder.
-
-The output can be downloaded and viewed locally (e.g. in Excel).
-
+```bash
+streaming/
+│
+├── input/
+│   ├── chunk_0.csv/
+│   ├── chunk_1.csv/
+│   └── ...
+│
+└── output/
+    ├── pattern_detected_<timestamp>_0.csv/
+    ├── pattern_detected_<timestamp>_1.csv/
+    └── ...
